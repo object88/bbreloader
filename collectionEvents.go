@@ -15,3 +15,10 @@ func newCollectedEvents() *collectedEvents {
 		written: make(map[string]bool),
 	}
 }
+
+func (ce *collectedEvents) HasEvents() bool {
+	return len(ce.created) > 0 ||
+		len(ce.removed) > 0 ||
+		len(ce.renamed) > 0 ||
+		len(ce.written) > 0
+}

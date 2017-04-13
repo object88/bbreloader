@@ -1,16 +1,18 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"log"
 	"os"
-	"os/exec"
 	"os/signal"
-	"path/filepath"
 	"time"
 
-	"github.com/gobwas/glob"
+	"github.com/object88/bbreloader/config"
+	"github.com/object88/bbreloader/glob"
+	"github.com/object88/bbreloader/step"
 	"github.com/rjeczalik/notify"
+	"github.com/spf13/viper"
 	"github.com/urfave/cli"
 )
 
@@ -19,9 +21,13 @@ const (
 )
 
 func main() {
+	config, ok := setupViper()
+	if !ok {
+		return
+	}
+
 	app := cli.NewApp()
 	app.Name = "bbreloader"
-
 	app.Flags = []cli.Flag{
 		cli.StringFlag{
 			EnvVar: "BBRELOADER_SOURCE",
@@ -33,14 +39,17 @@ func main() {
 		sigchan := make(chan os.Signal, 1)
 		signal.Notify(sigchan, os.Interrupt)
 
-		err := Watch(c.String(source))
-		if err != nil {
-			return err
+		for _, v := range config.Configs {
+			config := step.ParseConfig(v)
+
+			err := Watch(config)
+			if err != nil {
+				return err
+			}
 		}
 
+		// Wait for a signal to end the app.
 		<-sigchan
-
-		// Let's see if this changes.
 
 		return nil
 	}
@@ -48,19 +57,33 @@ func main() {
 	app.Run(os.Args)
 }
 
-func watch(notifyChan chan notify.EventInfo, callback func(*collectedEvents)) {
-	lull := time.Duration(2 * time.Second)
+func setupViper() (*config.ReloaderConfig, bool) {
+	viper.SetConfigName(".reloader")
+	viper.AddConfigPath(".")
+	err := viper.ReadInConfig()
+	if err != nil {
+		log.Fatalf("No configuration file found:\n%s\n", err.Error())
+		return nil, false
+	}
 
+	config := config.ReloaderConfig{}
+	viper.Unmarshal(&config)
+
+	log.Printf("Loaded config:\n%#v\n", config)
+	return &config, true
+}
+
+func watch(globs *glob.Matcher, notifyChan chan notify.EventInfo, callback func(*collectedEvents)) {
 	events := newCollectedEvents()
-
-	globSpec := "**/*.go"
-	g := glob.MustCompile(globSpec)
+	lull := time.Duration(2 * time.Second)
 
 	for {
 		select {
 		case e := <-notifyChan:
 			path := e.Path()
-			if g.Match(path) {
+			log.Printf("File '%s' changed!\n", path)
+			if globs.Matches(path) {
+				log.Printf("Got match\n")
 				// We have a match!
 				switch e.Event() {
 				case notify.Create:
@@ -81,34 +104,38 @@ func watch(notifyChan chan notify.EventInfo, callback func(*collectedEvents)) {
 	}
 }
 
-func Watch(basePath string) error {
+func Watch(config *step.Config) error {
 	notifyChan := make(chan notify.EventInfo, 4096)
 
-	err := notify.Watch(basePath, notifyChan, notify.All)
+	// Start watch at root filesystem level
+	err := notify.Watch(config.Watch, notifyChan, notify.All)
 	if err != nil {
+		// Failed to start the watch; stop the channel and quit.
 		notify.Stop(notifyChan)
 		return err
 	}
 
-	go watch(notifyChan, func(events *collectedEvents) {
-		if len(events.written) > 0 {
-			fmt.Printf("Changed files: %#v\n", events.written)
-			absPath, absErr := filepath.Abs(basePath)
-			if absErr != nil {
-				log.Fatalf("Failed to calculate the absolute path: %s", absErr)
-			}
-
-			cmd := exec.Command("go", "build", "-o", "./bin/bb")
-			cmd.Dir = absPath
-			runErr := cmd.Run()
-			if runErr != nil {
-				log.Fatalf("Build command failed: %s\n", runErr.Error())
+	// Loop.
+	for _, v := range config.Patterns {
+		go watch(v.Matcher, notifyChan, func(events *collectedEvents) {
+			if !events.HasEvents() {
 				return
 			}
-
-			log.Printf("Finished compilation")
-		}
-	})
+			fmt.Printf("Changed files: %#v\n", events.written)
+			execute(config, v.Steps)
+		})
+	}
 
 	return nil
+}
+
+func execute(config *step.Config, steps []step.Step) {
+	// For cancelling log-running operations.
+	ctx := context.Background()
+
+	for _, step := range steps {
+		step.Run(ctx)
+
+		log.Printf("Finished step.\n")
+	}
 }
