@@ -2,16 +2,23 @@
   "configs": [{
     "root": ".",
     "target": "./bin/bbreloader",
-    "targetArgs": [],
-    "patterns": [{
-      "glob": "**/*.go, !**/*_test.go",
+    "build": {
       "steps": [{
+        "type": "stop"
+      }, {
         "type": "build"
       }, {
         "type": "custom",
         "command": "chmod",
         "args": ["744", "./bin/bbreloader"]
       }]
+    },
+    "triggers": [{
+      "action": "build",
+      "glob": "**/*.go, !**/*_test.go"
+    }, {
+      "action": "restart",
+      "glob": "*.json"
     }]
   }]
 }

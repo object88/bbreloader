@@ -10,9 +10,7 @@ import (
 
 	"github.com/object88/bbreloader/config"
 	"github.com/object88/bbreloader/glob"
-	"github.com/object88/bbreloader/step"
 	"github.com/rjeczalik/notify"
-	"github.com/spf13/viper"
 	"github.com/urfave/cli"
 )
 
@@ -21,7 +19,7 @@ const (
 )
 
 func main() {
-	config, ok := setupViper()
+	config, ok := config.SetupConfig()
 	if !ok {
 		return
 	}
@@ -39,9 +37,7 @@ func main() {
 		sigchan := make(chan os.Signal, 1)
 		signal.Notify(sigchan, os.Interrupt)
 
-		for _, v := range config.Configs {
-			config := step.ParseConfig(v)
-
+		for _, config := range *config {
 			err := Watch(config)
 			if err != nil {
 				return err
@@ -55,22 +51,6 @@ func main() {
 	}
 
 	app.Run(os.Args)
-}
-
-func setupViper() (*config.ReloaderConfig, bool) {
-	viper.SetConfigName(".reloader")
-	viper.AddConfigPath(".")
-	err := viper.ReadInConfig()
-	if err != nil {
-		log.Fatalf("No configuration file found:\n%s\n", err.Error())
-		return nil, false
-	}
-
-	config := config.ReloaderConfig{}
-	viper.Unmarshal(&config)
-
-	log.Printf("Loaded config:\n%#v\n", config)
-	return &config, true
 }
 
 func watch(globs *glob.Matcher, notifyChan chan notify.EventInfo, callback func(*collectedEvents)) {
@@ -104,7 +84,7 @@ func watch(globs *glob.Matcher, notifyChan chan notify.EventInfo, callback func(
 	}
 }
 
-func Watch(config *step.Config) error {
+func Watch(config *config.Config) error {
 	notifyChan := make(chan notify.EventInfo, 4096)
 
 	// Start watch at root filesystem level
@@ -116,22 +96,23 @@ func Watch(config *step.Config) error {
 	}
 
 	// Loop.
-	for _, v := range config.Patterns {
+	for _, v := range config.Triggers {
 		go watch(v.Matcher, notifyChan, func(events *collectedEvents) {
 			if !events.HasEvents() {
 				return
 			}
 			fmt.Printf("Changed files: %#v\n", events.written)
-			execute(config, v.Steps)
+			execute(config)
 		})
 	}
 
 	return nil
 }
 
-func execute(config *step.Config, steps []step.Step) {
+func execute(config *config.Config) {
 	// For cancelling log-running operations.
 	ctx := context.Background()
+	steps := config.Build.Steps
 
 	for _, step := range steps {
 		step.Run(ctx)

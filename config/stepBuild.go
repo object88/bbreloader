@@ -1,12 +1,10 @@
-package step
+package config
 
 import (
 	"context"
 	"log"
 	"os"
 	"os/exec"
-
-	"github.com/object88/bbreloader/config"
 )
 
 // StepBuild describes a build step
@@ -16,12 +14,12 @@ type StepBuild struct {
 	args   []string
 }
 
-func newStepBuild(config *config.Config, sc *config.StepConfig) *StepBuild {
+func newStepBuild(config *config, sc *stepConfig) *StepBuild {
 	args := []string{}
-	if sc.Args != nil {
-		args = *sc.Args
+	if sc.args != nil {
+		args = *sc.args
 	}
-	return &StepBuild{config.Root, config.Target, args}
+	return &StepBuild{config.root, config.target, args}
 }
 
 // Run executes the step with an interruptable context
