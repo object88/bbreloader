@@ -2,6 +2,7 @@ package config
 
 import "context"
 
+// StepCustom is a custom step in the build process
 type StepCustom struct {
 	Command string    `json:"command"`
 	Args    *[]string `json:"args"`

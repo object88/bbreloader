@@ -1,25 +1,32 @@
 package config
 
-type reloaderConfig struct {
-	configs []*config `mapstructure:"configs"`
+// ReloaderMapstructure is for internal use only
+type ReloaderMapstructure struct {
+	Projects []*ProjectMapstructure `mapstructure:"projects"`
 }
 
-type config struct {
-	root   string `mapstructure:"root"`
-	target string `mapstructure:"target"`
-	build  *struct {
-		steps []*stepConfig `mapstructure:"steps"`
-	} `mapstructure:"patterns"`
-	triggers *[]*triggerConfig `mapstructure:"triggers"`
+// ProjectMapstructure is for internal use only
+type ProjectMapstructure struct {
+	Root     string                  `mapstructure:"root"`
+	Target   string                  `mapstructure:"target"`
+	Build    *BuildMapstructure      `mapstructure:"build"`
+	Triggers *[]*TriggerMapstructure `mapstructure:"triggers"`
 }
 
-type stepConfig struct {
-	t       string    `mapstructure:"type"`
-	command *string   `mapstructure:"command"`
-	args    *[]string `mapstructure:"args"`
+// BuildMapstructure is for internal use only
+type BuildMapstructure struct {
+	Steps []*StepMapstructure `mapstructure:"steps"`
 }
 
-type triggerConfig struct {
-	action string `mapstructure:"action"`
-	glob   string `mapstructure:"glob"`
+// StepMapstructure is for internal use only
+type StepMapstructure struct {
+	Type    string    `mapstructure:"type"`
+	Command *string   `mapstructure:"command"`
+	Args    *[]string `mapstructure:"args"`
+}
+
+// TriggerMapstructure is for internal use only
+type TriggerMapstructure struct {
+	Action string `mapstructure:"action"`
+	Glob   string `mapstructure:"glob"`
 }

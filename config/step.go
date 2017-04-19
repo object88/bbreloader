@@ -9,10 +9,10 @@ type Step interface {
 	Run(ctx context.Context) (int, error)
 }
 
-func stepConfigToStep(config *config, sc *stepConfig) Step {
-	switch sc.t {
+func stepConfigToStep(project *ProjectMapstructure, sc *StepMapstructure) Step {
+	switch sc.Type {
 	case "build":
-		return newStepBuild(config, sc)
+		return newStepBuild(project, sc)
 	default:
 		return newStepCustom()
 	}

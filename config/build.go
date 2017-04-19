@@ -1,13 +1,18 @@
 package config
 
+// Build contains a series of individual steps necessary to build a project
 type Build struct {
 	Steps []Step
 }
 
-func parseBuildConfig(config *config, steps []*stepConfig) *Build {
-	s := make([]Step, len(steps))
-	for i := 0; i < len(s); i++ {
-		s[i] = stepConfigToStep(config, steps[i])
+func parseBuildConfig(project *ProjectMapstructure, build *BuildMapstructure) *Build {
+	count := 0
+	if build.Steps != nil {
+		count = len(build.Steps)
+	}
+	s := make([]Step, count)
+	for i := 0; i < count; i++ {
+		s[i] = stepConfigToStep(project, build.Steps[i])
 	}
 	return &Build{s}
 }

@@ -8,7 +8,8 @@ import (
 	"github.com/spf13/viper"
 )
 
-type Config struct {
+// Project describes the build and run actions to take for a single project
+type Project struct {
 	Root     string
 	Watch    string
 	Target   string
@@ -17,33 +18,22 @@ type Config struct {
 }
 
 // SetupConfig reads the configuration and transforms it into living objects
-func SetupConfig() (*[]*Config, bool) {
-	viper.SetConfigName(".reloader")
-	viper.AddConfigPath(".")
-	err := viper.ReadInConfig()
-	if err != nil {
-		log.Fatalf("No configuration file found:\n%s\n", err.Error())
-		return nil, false
-	}
-
-	// configs := viper.Get("configs").([]interface{})[0]
-	// log.Printf("%#v\n", configs)
-
-	config := reloaderConfig{}
+func SetupConfig() (*[]*Project, bool) {
+	config := ReloaderMapstructure{}
 	viper.Unmarshal(&config)
 
 	log.Printf("Loaded config:\n%#v\n", config)
 
-	c := make([]*Config, len(config.configs))
-	for k, v := range config.configs {
+	c := make([]*Project, len(config.Projects))
+	for k, v := range config.Projects {
 		c[k] = parseConfig(v)
 	}
 
 	return &c, true
 }
 
-func parseConfig(config *config) *Config {
-	root, err := filepath.Abs(config.root)
+func parseConfig(project *ProjectMapstructure) *Project {
+	root, err := filepath.Abs(project.Root)
 	if err != nil {
 		log.Fatalf("Failed to calculate the absolute path: %s\n", err)
 		return nil
@@ -55,17 +45,17 @@ func parseConfig(config *config) *Config {
 	}
 	watch += "..."
 
-	build := parseBuildConfig(config, config.build.steps)
+	build := parseBuildConfig(project, project.Build)
 
-	triggers := make([]*Trigger, len(*config.triggers))
+	triggers := make([]*Trigger, len(*project.Triggers))
 	for i := 0; i < len(triggers); i++ {
-		triggers[i] = parseTriggerConfig(config, (*config.triggers)[i])
+		triggers[i] = parseTriggerConfig((*project.Triggers)[i])
 	}
 
-	return &Config{
+	return &Project{
 		Root:     root,
 		Watch:    watch,
-		Target:   config.target,
+		Target:   project.Target,
 		Build:    build,
 		Triggers: triggers,
 	}

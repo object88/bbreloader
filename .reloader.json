@@ -1,5 +1,5 @@
 {
-  "configs": [{
+  "projects": [{
     "root": ".",
     "target": "./bin/bbreloader",
     "build": {

@@ -14,12 +14,12 @@ type StepBuild struct {
 	args   []string
 }
 
-func newStepBuild(config *config, sc *stepConfig) *StepBuild {
+func newStepBuild(project *ProjectMapstructure, sc *StepMapstructure) *StepBuild {
 	args := []string{}
-	if sc.args != nil {
-		args = *sc.args
+	if sc.Args != nil {
+		args = *sc.Args
 	}
-	return &StepBuild{config.root, config.target, args}
+	return &StepBuild{project.Root, project.Target, args}
 }
 
 // Run executes the step with an interruptable context

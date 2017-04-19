@@ -1,4 +1,4 @@
-package main
+package watch
 
 type collectedEvents struct {
 	created map[string]bool
