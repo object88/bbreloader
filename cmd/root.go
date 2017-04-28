@@ -54,6 +54,7 @@ var RootCmd = &cobra.Command{
 			fmt.Printf("NOPE.")
 			return
 		}
+
 		watch.Run(configs)
 	},
 }

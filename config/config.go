@@ -1,7 +1,9 @@
 package config
 
 import (
+	"context"
 	"log"
+	"os/exec"
 	"path/filepath"
 	"strings"
 
@@ -15,6 +17,7 @@ type Project struct {
 	Target   string
 	Build    *Build
 	Triggers []*Trigger
+	Context  context.Context
 }
 
 // SetupConfig reads the configuration and transforms it into living objects
@@ -30,6 +33,25 @@ func SetupConfig() (*[]*Project, bool) {
 	}
 
 	return &c, true
+}
+
+// Start spins up the process
+func (c *Project) Start() {
+	ctx := context.Background()
+	log.Printf("Starting process...")
+	exec.CommandContext(ctx, c.Target).Start()
+	c.Context = ctx
+	log.Printf("Started.")
+}
+
+// Stop shuts down the process
+func (c *Project) Stop() {
+	if c.Context != nil {
+		log.Printf("Stopping process...")
+		c.Context.Done()
+		c.Context = nil
+		log.Printf("Stopped.")
+	}
 }
 
 func parseConfig(project *ProjectMapstructure) *Project {

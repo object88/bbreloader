@@ -1,6 +1,9 @@
 package config
 
-import "context"
+import (
+	"context"
+	"log"
+)
 
 // StepCustom is a custom step in the build process
 type StepCustom struct {
@@ -13,6 +16,8 @@ func newStepCustom() *StepCustom {
 	return &StepCustom{}
 }
 
+// Run is not implemented
 func (s *StepCustom) Run(ctx context.Context) (int, error) {
+	log.Printf("Custom step not implemented.")
 	return 0, nil
 }

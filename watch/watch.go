@@ -2,14 +2,12 @@ package watch
 
 import (
 	"context"
-	"fmt"
 	"log"
 	"os"
 	"os/signal"
 	"time"
 
 	"github.com/object88/bbreloader/config"
-	"github.com/object88/bbreloader/glob"
 	"github.com/rjeczalik/notify"
 )
 
@@ -22,6 +20,12 @@ func Run(configs *[]*config.Project) error {
 	signal.Notify(sigchan, os.Interrupt)
 
 	for _, config := range *configs {
+		// Do initial build and start the run.
+
+		build(config)
+		config.Start()
+
+		// Watch the files for changes
 		err := Watch(config)
 		if err != nil {
 			return err
@@ -34,68 +38,60 @@ func Run(configs *[]*config.Project) error {
 	return nil
 }
 
-func watch(globs *glob.Matcher, notifyChan chan notify.EventInfo, callback func(*collectedEvents)) {
-	events := newCollectedEvents()
+func watch(triggers *[]*config.Trigger, notifyChan chan notify.EventInfo, callback func(*config.CollectedEvents)) {
 	lull := time.Duration(2 * time.Second)
 
 	for {
 		select {
 		case e := <-notifyChan:
 			path := e.Path()
-			log.Printf("File '%s' changed!\n", path)
-			if globs.Matches(path) {
-				log.Printf("Got match\n")
-				// We have a match!
-				switch e.Event() {
-				case notify.Create:
-					events.created[path] = true
-				case notify.Remove:
-					events.removed[path] = true
-				case notify.Rename:
-					events.renamed[path] = true
-				case notify.Write:
-					events.written[path] = true
+			for _, v := range *triggers {
+				if v.Matcher.Matches(path) {
+					// We have a match!
+					v.CollectedEvents.AddEvent(e)
 				}
 			}
 		case <-time.After(lull):
-			processed := events
-			events = newCollectedEvents()
-			go callback(processed)
+			callbackInvoked := false
+			for _, v := range *triggers {
+				processed := v.ResetTrigger()
+
+				if !callbackInvoked && processed.HasEvents() {
+					go callback(processed)
+					callbackInvoked = true
+				}
+			}
 		}
 	}
 }
 
-func Watch(config *config.Project) error {
+// Watch builds and starts the process, then watches the file system for
+// changes to trigger another build or restart
+func Watch(c *config.Project) error {
 	notifyChan := make(chan notify.EventInfo, 4096)
 
 	// Start watch at root filesystem level
-	err := notify.Watch(config.Watch, notifyChan, notify.All)
+	err := notify.Watch(c.Watch, notifyChan, notify.All)
 	if err != nil {
 		// Failed to start the watch; stop the channel and quit.
 		notify.Stop(notifyChan)
 		return err
 	}
 
-	// Loop.
-	for _, v := range config.Triggers {
-		go watch(v.Matcher, notifyChan, func(events *collectedEvents) {
-			if !events.HasEvents() {
-				return
-			}
-			fmt.Printf("Changed files: %#v\n", events.written)
-			execute(config)
-		})
-	}
+	go watch(&c.Triggers, notifyChan, func(events *config.CollectedEvents) {
+		build(c)
+	})
 
 	return nil
 }
 
-func execute(config *config.Project) {
+func build(config *config.Project) {
 	// For cancelling log-running operations.
 	ctx := context.Background()
 	steps := config.Build.Steps
 
-	for _, step := range steps {
+	for i, step := range steps {
+		log.Printf("Step #%d...", i)
 		step.Run(ctx)
 
 		log.Printf("Finished step.\n")
