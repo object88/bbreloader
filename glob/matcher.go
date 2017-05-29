@@ -1,7 +1,6 @@
 package glob
 
 import (
-	"log"
 	"strings"
 
 	"github.com/gobwas/glob"
@@ -36,7 +35,6 @@ func PreprocessGlobSpec(globSpec string) *Matcher {
 func (m *Matcher) Matches(path string) bool {
 	for _, v := range m.matchers {
 		if v.g.Match(path) != v.b {
-			log.Printf("Path '%s' failed against glob %#v\n", path, v.g)
 			return false
 		}
 	}

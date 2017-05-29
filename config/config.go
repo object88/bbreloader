@@ -18,6 +18,7 @@ type Project struct {
 	Build    *Build
 	Triggers []*Trigger
 	Context  context.Context
+	CancelFn *context.CancelFunc
 }
 
 // SetupConfig reads the configuration and transforms it into living objects
@@ -37,10 +38,16 @@ func SetupConfig() (*[]*Project, bool) {
 
 // Start spins up the process
 func (c *Project) Start() {
-	ctx := context.Background()
+	ctx, cancelFn := context.WithCancel(context.Background())
 	log.Printf("Starting process...")
-	exec.CommandContext(ctx, c.Target).Start()
+	startErr := exec.CommandContext(ctx, c.Target).Start()
+	if startErr != nil {
+		log.Printf("Failed to start process.")
+		cancelFn()
+		return
+	}
 	c.Context = ctx
+	c.CancelFn = &cancelFn
 	log.Printf("Started.")
 }
 
@@ -48,8 +55,9 @@ func (c *Project) Start() {
 func (c *Project) Stop() {
 	if c.Context != nil {
 		log.Printf("Stopping process...")
-		c.Context.Done()
+		(*c.CancelFn)()
 		c.Context = nil
+		c.CancelFn = nil
 		log.Printf("Stopped.")
 	}
 }

@@ -15,18 +15,18 @@ const (
 	source string = "source"
 )
 
-func Run(configs *[]*config.Project) error {
+func Run(projects *[]*config.Project) error {
 	sigchan := make(chan os.Signal, 1)
 	signal.Notify(sigchan, os.Interrupt)
 
-	for _, config := range *configs {
+	for _, project := range *projects {
 		// Do initial build and start the run.
 
-		build(config)
-		config.Start()
+		build(project)
+		project.Start()
 
 		// Watch the files for changes
-		err := Watch(config)
+		err := Watch(project)
 		if err != nil {
 			return err
 		}
@@ -45,6 +45,7 @@ func watch(triggers *[]*config.Trigger, notifyChan chan notify.EventInfo, callba
 		select {
 		case e := <-notifyChan:
 			path := e.Path()
+			log.Printf("%s :: %s\n", path, e.Event().String())
 			for _, v := range *triggers {
 				if v.Matcher.Matches(path) {
 					// We have a match!
@@ -85,15 +86,20 @@ func Watch(c *config.Project) error {
 	return nil
 }
 
-func build(config *config.Project) {
+func build(project *config.Project) {
 	// For cancelling log-running operations.
 	ctx := context.Background()
-	steps := config.Build.Steps
+	steps := project.Build.Steps
 
 	for i, step := range steps {
 		log.Printf("Step #%d...", i)
-		step.Run(ctx)
+		step.Run(ctx, project)
 
 		log.Printf("Finished step.\n")
 	}
+}
+
+func restart(project *config.Project) {
+	project.Stop()
+	project.Start()
 }
