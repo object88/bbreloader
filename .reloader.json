@@ -3,15 +3,18 @@
     "root": ".",
     "target": "./bin/bbreloader",
     "build": {
-      "steps": [{
-        "type": "stop"
-      }, {
-        "type": "build"
-      }, {
-        "type": "custom",
+      "pre-build-steps": [],
+      "post-build-steps": [{
         "command": "chmod",
         "args": ["744", "./bin/bbreloader"]
       }]
+    },
+    "test": {
+
+    },
+    "run": {
+      "retain": true,
+
     },
     "triggers": [{
       "action": "build",
