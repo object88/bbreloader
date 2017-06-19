@@ -3,8 +3,6 @@ package cmd
 import (
 	"fmt"
 
-	"github.com/object88/bbreloader/config"
-	"github.com/object88/bbreloader/watch"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 )
@@ -49,12 +47,13 @@ var RootCmd = &cobra.Command{
 	Short: "bbreloader is a watcher for developers",
 	Long:  "",
 	Run: func(cmd *cobra.Command, args []string) {
-		configs, ok := config.SetupConfig()
-		if !ok {
-			fmt.Printf("NOPE.")
-			return
-		}
-
-		watch.Run(configs)
+		cmd.HelpFunc()(cmd, args)
+		// configs, ok := config.SetupConfig()
+		// if !ok {
+		// 	fmt.Printf("NOPE.")
+		// 	return
+		// }
+		//
+		// watch.Run(configs)
 	},
 }
