@@ -38,7 +38,7 @@ func Run(projects *[]*config.Project) error {
 	return nil
 }
 
-func watch(triggers *[]*config.Trigger, notifyChan chan notify.EventInfo, callback func(*config.CollectedEvents)) {
+func watch(trigger *config.Trigger, notifyChan chan notify.EventInfo, callback func(*config.CollectedEvents)) {
 	lull := time.Duration(2 * time.Second)
 
 	for {
@@ -46,21 +46,15 @@ func watch(triggers *[]*config.Trigger, notifyChan chan notify.EventInfo, callba
 		case e := <-notifyChan:
 			path := e.Path()
 			log.Printf("%s :: %s\n", path, e.Event().String())
-			for _, v := range *triggers {
-				if v.Matcher.Matches(path) {
-					// We have a match!
-					v.CollectedEvents.AddEvent(e)
-				}
+			if trigger.Matcher.Matches(path) {
+				// We have a match!
+				trigger.CollectedEvents.AddEvent(e)
 			}
 		case <-time.After(lull):
-			callbackInvoked := false
-			for _, v := range *triggers {
-				processed := v.ResetTrigger()
+			processed := trigger.ResetTrigger()
 
-				if !callbackInvoked && processed.HasEvents() {
-					go callback(processed)
-					callbackInvoked = true
-				}
+			if processed.HasEvents() {
+				go callback(processed)
 			}
 		}
 	}
@@ -79,7 +73,7 @@ func Watch(c *config.Project) error {
 		return err
 	}
 
-	go watch(&c.Triggers, notifyChan, func(events *config.CollectedEvents) {
+	go watch(c.Run.Rebuild, notifyChan, func(events *config.CollectedEvents) {
 		build(c)
 	})
 
@@ -89,9 +83,16 @@ func Watch(c *config.Project) error {
 func build(project *config.Project) {
 	// For cancelling log-running operations.
 	ctx := context.Background()
-	steps := project.Build.Steps
 
-	for i, step := range steps {
+	runSteps(ctx, project, &project.Build.PreBuild)
+
+	project.Build.Run(ctx, project)
+
+	runSteps(ctx, project, &project.Build.PostBuild)
+}
+
+func runSteps(ctx context.Context, project *config.Project, steps *[]*config.Step) {
+	for i, step := range *steps {
 		log.Printf("Step #%d...", i)
 		step.Run(ctx, project)
 

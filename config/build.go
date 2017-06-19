@@ -16,6 +16,9 @@ type Build struct {
 }
 
 func parseBuildConfig(project *ProjectMapstructure, build *BuildMapstructure) *Build {
+	if build == nil {
+		return &Build{&Args{}, []*Step{}, []*Step{}}
+	}
 	args := parseArgs(build.Args)
 	pre := makeSteps(project, build.PreBuildSteps)
 	post := makeSteps(project, build.PostBuildSteps)

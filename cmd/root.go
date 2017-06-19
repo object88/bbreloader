@@ -12,7 +12,7 @@ import (
 var cfgFile string
 
 func init() {
-	RootCmd.AddCommand(versionCmd)
+	RootCmd.AddCommand(initCmd, runCmd, testCmd, versionCmd)
 	RootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", "config file (default is ./.reloader.json)")
 
 	initConfig()
@@ -34,7 +34,7 @@ func initConfig() {
 		fmt.Printf("Failed to read config: %s\n", err.Error())
 		return
 	}
-	fmt.Println("Using config file:", viper.ConfigFileUsed())
+	fmt.Printf("Using config file: %#v\n", viper.ConfigFileUsed())
 
 	// Make custom implementation with notify.
 	// viper.WatchConfig()

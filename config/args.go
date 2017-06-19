@@ -1,5 +1,7 @@
 package config
 
+// Args is an array of strings, used to pass arguments to
+// processes started by reloader
 type Args []string
 
 func parseArgs(args *[]string) *Args {

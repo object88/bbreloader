@@ -17,6 +17,8 @@ type Project struct {
 	Target *string
 	Build  *Build
 	// Triggers []*Trigger
+	// Test *Test
+	Run      *Run
 	Context  context.Context
 	CancelFn *context.CancelFunc
 }
@@ -26,7 +28,7 @@ func SetupConfig() (*[]*Project, bool) {
 	config := ReloaderMapstructure{}
 	viper.Unmarshal(&config)
 
-	log.Printf("Loaded config:\n%#v\n", config)
+	log.Printf("Loaded config:\n%s\n", config)
 
 	c := make([]*Project, len(config.Projects))
 	for k, v := range config.Projects {
@@ -89,16 +91,13 @@ func parseConfig(project *ProjectMapstructure) *Project {
 
 	build := parseBuildConfig(project, project.Build)
 
-	// triggers := make([]*Trigger, len(*project.Triggers))
-	// for i := 0; i < len(triggers); i++ {
-	// 	triggers[i] = parseTriggerConfig((*project.Triggers)[i])
-	// }
+	run := parseRun(project, project.Run)
 
 	return &Project{
 		Root:   root,
 		Watch:  watch,
 		Target: project.Target,
 		Build:  build,
-		// Triggers: triggers,
+		Run:    run,
 	}
 }

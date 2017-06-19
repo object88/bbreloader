@@ -12,13 +12,13 @@ const defaultRestartGlob = ""
 const defaultRebuildGlob = "*.go"
 
 type Run struct {
-	Args        *Args
-	Retain      bool
-	RebuildGlob string
-	RestartGlob string
+	Args    *Args
+	Retain  bool
+	Rebuild *Trigger
+	Restart *Trigger
 }
 
-func newRun(project *ProjectMapstructure, r *RunMapstructure) *Run {
+func parseRun(project *ProjectMapstructure, r *RunMapstructure) *Run {
 	args := parseArgs(r.Args)
 
 	retain := false
@@ -30,13 +30,15 @@ func newRun(project *ProjectMapstructure, r *RunMapstructure) *Run {
 	if r.RebuildGlob != nil {
 		rebuildGlob = *r.RebuildGlob
 	}
+	rebuild := parseGlob(rebuildGlob)
 
 	restartGlob := defaultRestartGlob
 	if r.RestartGlob != nil {
 		restartGlob = *r.RestartGlob
 	}
+	restart := parseGlob(restartGlob)
 
-	return &Run{args, retain, rebuildGlob, restartGlob}
+	return &Run{args, retain, rebuild, restart}
 }
 
 // Run executes the step with an interruptable context
