@@ -14,6 +14,8 @@ var runCmd = &cobra.Command{
 	Short:   "Runs the application",
 	Long:    "For projects with a Target specified, will start the application and restart as code changes.",
 	Run: func(cmd *cobra.Command, args []string) {
+		readConfig()
+
 		configs, ok := config.SetupConfig()
 		if !ok {
 			fmt.Printf("NOPE.")
