@@ -48,12 +48,5 @@ var RootCmd = &cobra.Command{
 	Long:  "",
 	Run: func(cmd *cobra.Command, args []string) {
 		cmd.HelpFunc()(cmd, args)
-		// configs, ok := config.SetupConfig()
-		// if !ok {
-		// 	fmt.Printf("NOPE.")
-		// 	return
-		// }
-		//
-		// watch.Run(configs)
 	},
 }
