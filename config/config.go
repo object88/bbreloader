@@ -16,7 +16,6 @@ type Project struct {
 	Watch  string
 	Target *string
 	Build  *Build
-	// Triggers []*Trigger
 	// Test *Test
 	Run      *Run
 	Context  context.Context

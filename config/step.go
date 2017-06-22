@@ -13,6 +13,19 @@ type Step struct {
 	Args    *[]string `json:"args"`
 }
 
+func runSteps(ctx context.Context, project *Project, steps *[]*Step) {
+	for i, step := range *steps {
+		select {
+		case <-ctx.Done():
+			return
+		default:
+			log.Printf("Step #%d...", i)
+			step.Run(ctx, project)
+			log.Printf("Finished step.\n")
+		}
+	}
+}
+
 func stepConfigToStep(project *ProjectMapstructure, sc *StepMapstructure) *Step {
 	return &Step{
 		Command: *sc.Command,

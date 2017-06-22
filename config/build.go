@@ -2,27 +2,53 @@ package config
 
 import (
 	"context"
+	"fmt"
 	"io/ioutil"
 	"log"
 	"os"
 	"os/exec"
+	"sync"
 )
+
+var tempDir string
+var tempFileIndex int
+
+// InitializeBuildDirectory will get a temp directory for all the
+// build operations.
+func InitializeBuildDirectory() error {
+	var err error
+	tempDir, err = ioutil.TempDir("", "")
+	if nil != err {
+		return err
+	}
+
+	fmt.Printf("Will use build dir '%s'\n", tempDir)
+	return nil
+}
+
+// DestroyBuildDirectory removes the temp directory.
+func DestroyBuildDirectory() {
+	os.Remove(tempDir)
+}
 
 // Build contains a series of individual steps necessary to build a project
 type Build struct {
 	Args      *Args
 	PreBuild  []*Step
 	PostBuild []*Step
+	cancelFn  *context.CancelFunc
+	mutex     *sync.Mutex
 }
 
 func parseBuildConfig(project *ProjectMapstructure, build *BuildMapstructure) *Build {
+	m := sync.Mutex{}
 	if build == nil {
-		return &Build{&Args{}, []*Step{}, []*Step{}}
+		return &Build{&Args{}, []*Step{}, []*Step{}, nil, &m}
 	}
 	args := parseArgs(build.Args)
 	pre := makeSteps(project, build.PreBuildSteps)
 	post := makeSteps(project, build.PostBuildSteps)
-	return &Build{args, pre, post}
+	return &Build{args, pre, post, nil, &m}
 }
 
 func makeSteps(project *ProjectMapstructure, steps *[]StepMapstructure) []*Step {
@@ -40,38 +66,97 @@ func makeSteps(project *ProjectMapstructure, steps *[]StepMapstructure) []*Step 
 }
 
 // Run executes the step with an interruptable context
-func (s *Build) Run(ctx context.Context, p *Project) (int, error) {
+func (b *Build) Run(p *Project) (int, error) {
+	earlyCancel := false
 
-	var tempFileName string
-	copy := false
-	tempFile, err := ioutil.TempFile("", "tmp")
-	if err != nil {
-		tempFileName = *p.Target
-	} else {
-		copy = true
-		tempFileName = tempFile.Name()
+	// Lock the build file and check for a cancellation function
+	b.mutex.Lock()
+	if *b.cancelFn != nil {
+		(*b.cancelFn)()
+		b.cancelFn = nil
+		earlyCancel = true
 	}
 
-	completeArgs := s.Args.prependArgs("build", "-o", "tempFileName")
+	// TODO: fix!
+	// This is going to cause some trouble.  If there was already a build running,
+	// and we come along and cancel it, then we don't want to use `cancelFn` below
+	// (or clear it out from b.mutex), because it will have changed.
+	ctx, cancelFn := context.WithCancel(context.Background())
+	b.cancelFn = &cancelFn
 
-	// For now, just route output to stdout.
-	cmd := exec.CommandContext(ctx, "go", *completeArgs...)
-	cmd.Dir = p.Root
-	cmd.Stdout = os.Stdout
-	cmd.Stderr = os.Stdout
+	b.mutex.Unlock()
 
-	err = cmd.Run()
-	if err != nil {
-		log.Fatalf("Build command failed: %s\n", err.Error())
-		return 0, err
+	// Do the work
+	go b.work(ctx, p)
+
+	// Clean up
+	b.mutex.Lock()
+	cancelFn()
+	if !earlyCancel {
+		b.cancelFn = nil
 	}
+	b.mutex.Unlock()
 
-	if copy {
-		linkErr := os.Link(tempFileName, *p.Target)
-		if linkErr != nil {
-			// Crap.
+	return 0, nil
+}
+
+func (b *Build) work(ctx context.Context, p *Project) error {
+	tempFileName := fmt.Sprintf("%s/%d.tmp", tempDir, tempFileIndex)
+	tempFileIndex++
+
+	// Run pre-build steps
+	runSteps(ctx, p, &b.PreBuild)
+
+	// Spawn the go build command
+	select {
+	case <-ctx.Done():
+		return nil
+	default:
+		completeArgs := b.Args.prependArgs("build", "-o", tempFileName)
+		cmd := exec.CommandContext(ctx, "go", *completeArgs...)
+		cmd.Dir = p.Root
+		cmd.Stdout = os.Stdout
+		cmd.Stderr = os.Stdout
+
+		err := cmd.Run()
+		if err != nil {
+			log.Fatalf("Build command failed: %s\n", err.Error())
+			return err
 		}
 	}
 
-	return 0, nil
+	// Stop any previously running instance
+	select {
+	case <-ctx.Done():
+		return nil
+	default:
+		p.Stop()
+	}
+
+	if p.Target != nil {
+		// Move the built file.
+		select {
+		case <-ctx.Done():
+			return nil
+		default:
+			// WARNING; there are some issues with this strategy:
+			// https://stackoverflow.com/questions/30385225/in-go-is-there-an-os-independent-way-to-atomically-overwrite-a-file
+			linkErr := os.Rename(tempFileName, *p.Target)
+			if linkErr != nil {
+				// Crap.
+				fmt.Printf("%s\n", linkErr.Error())
+				return linkErr
+			}
+		}
+	}
+
+	// Run post-build steps
+	select {
+	case <-ctx.Done():
+		return nil
+	default:
+		runSteps(ctx, p, &b.PostBuild)
+	}
+
+	return nil
 }

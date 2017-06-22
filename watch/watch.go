@@ -1,7 +1,6 @@
 package watch
 
 import (
-	"context"
 	"log"
 	"os"
 	"os/signal"
@@ -11,18 +10,17 @@ import (
 	"github.com/rjeczalik/notify"
 )
 
-const (
-	source string = "source"
-)
-
 func Run(projects *[]*config.Project) error {
 	sigchan := make(chan os.Signal, 1)
 	signal.Notify(sigchan, os.Interrupt)
 
+	// Initialize the build directory
+	config.InitializeBuildDirectory()
+
 	for _, project := range *projects {
 		// Do initial build and start the run.
 
-		build(project)
+		project.Build.Run(project)
 		project.Start()
 
 		// Watch the files for changes
@@ -34,6 +32,9 @@ func Run(projects *[]*config.Project) error {
 
 	// Wait for a signal to end the app.
 	<-sigchan
+
+	// Clean up the build temp directory
+	config.DestroyBuildDirectory()
 
 	return nil
 }
@@ -62,42 +63,22 @@ func watch(trigger *config.Trigger, notifyChan chan notify.EventInfo, callback f
 
 // Watch builds and starts the process, then watches the file system for
 // changes to trigger another build or restart
-func Watch(c *config.Project) error {
+func Watch(p *config.Project) error {
 	notifyChan := make(chan notify.EventInfo, 4096)
 
 	// Start watch at root filesystem level
-	err := notify.Watch(c.Watch, notifyChan, notify.All)
+	err := notify.Watch(p.Watch, notifyChan, notify.All)
 	if err != nil {
 		// Failed to start the watch; stop the channel and quit.
 		notify.Stop(notifyChan)
 		return err
 	}
 
-	go watch(c.Run.Rebuild, notifyChan, func(events *config.CollectedEvents) {
-		build(c)
+	go watch(p.Run.Rebuild, notifyChan, func(events *config.CollectedEvents) {
+		p.Build.Run(p)
 	})
 
 	return nil
-}
-
-func build(project *config.Project) {
-	// For cancelling log-running operations.
-	ctx := context.Background()
-
-	runSteps(ctx, project, &project.Build.PreBuild)
-
-	project.Build.Run(ctx, project)
-
-	runSteps(ctx, project, &project.Build.PostBuild)
-}
-
-func runSteps(ctx context.Context, project *config.Project, steps *[]*config.Step) {
-	for i, step := range *steps {
-		log.Printf("Step #%d...", i)
-		step.Run(ctx, project)
-
-		log.Printf("Finished step.\n")
-	}
 }
 
 func restart(project *config.Project) {
