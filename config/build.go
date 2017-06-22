@@ -7,7 +7,8 @@ import (
 	"log"
 	"os"
 	"os/exec"
-	"sync"
+
+	"github.com/object88/bbreloader/sync"
 )
 
 var tempDir string
@@ -36,19 +37,18 @@ type Build struct {
 	Args      *Args
 	PreBuild  []*Step
 	PostBuild []*Step
-	cancelFn  *context.CancelFunc
-	mutex     *sync.Mutex
+	restarter *sync.Restarter
 }
 
 func parseBuildConfig(project *ProjectMapstructure, build *BuildMapstructure) *Build {
-	m := sync.Mutex{}
+	r := sync.NewRestarter()
 	if build == nil {
-		return &Build{&Args{}, []*Step{}, []*Step{}, nil, &m}
+		return &Build{&Args{}, []*Step{}, []*Step{}, r}
 	}
 	args := parseArgs(build.Args)
 	pre := makeSteps(project, build.PreBuildSteps)
 	post := makeSteps(project, build.PostBuildSteps)
-	return &Build{args, pre, post, nil, &m}
+	return &Build{args, pre, post, r}
 }
 
 func makeSteps(project *ProjectMapstructure, steps *[]StepMapstructure) []*Step {
@@ -67,35 +67,9 @@ func makeSteps(project *ProjectMapstructure, steps *[]StepMapstructure) []*Step 
 
 // Run executes the step with an interruptable context
 func (b *Build) Run(p *Project) (int, error) {
-	earlyCancel := false
-
-	// Lock the build file and check for a cancellation function
-	b.mutex.Lock()
-	if *b.cancelFn != nil {
-		(*b.cancelFn)()
-		b.cancelFn = nil
-		earlyCancel = true
-	}
-
-	// TODO: fix!
-	// This is going to cause some trouble.  If there was already a build running,
-	// and we come along and cancel it, then we don't want to use `cancelFn` below
-	// (or clear it out from b.mutex), because it will have changed.
-	ctx, cancelFn := context.WithCancel(context.Background())
-	b.cancelFn = &cancelFn
-
-	b.mutex.Unlock()
-
-	// Do the work
-	go b.work(ctx, p)
-
-	// Clean up
-	b.mutex.Lock()
-	cancelFn()
-	if !earlyCancel {
-		b.cancelFn = nil
-	}
-	b.mutex.Unlock()
+	b.restarter.Invoke(func(ctx context.Context) {
+		b.work(ctx, p)
+	})
 
 	return 0, nil
 }
