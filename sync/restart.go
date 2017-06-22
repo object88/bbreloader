@@ -15,24 +15,23 @@ type RestartableFn func(ctx context.Context)
 // is made while one is already running, the first one will be cancelled,
 // and then the second will be started.
 type Restarter struct {
-	f RestartableFn
 	m *sync.Mutex
 	c *context.CancelFunc
 }
 
 // NewRestarter creatnes a new restarter struct
-func NewRestarter(f RestartableFn) *Restarter {
-	return &Restarter{f, &sync.Mutex{}, nil}
+func NewRestarter() *Restarter {
+	return &Restarter{&sync.Mutex{}, nil}
 }
 
 // Invoke calls the associated method, first cancelling any existing
 // call
-func (r *Restarter) Invoke() {
+func (r *Restarter) Invoke(f RestartableFn) {
 	// Ensure that we are the only running method
 	ctx, cancelFn := r.spinUp()
 
 	// Do the work
-	r.f(ctx)
+	f(ctx)
 
 	// Clean up
 	r.spinDown(cancelFn)
