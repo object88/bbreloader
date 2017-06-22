@@ -27,7 +27,12 @@ func Test_WithTwoSynchInvocations(t *testing.T) {
 
 	f := func(ctx context.Context) {
 		time.Sleep(10 * time.Millisecond)
-		count++
+		select {
+		case <-ctx.Done():
+			return
+		default:
+			count++
+		}
 	}
 
 	r := NewRestarter(f)
@@ -44,7 +49,12 @@ func Test_WithTwoAsyncInvocations(t *testing.T) {
 
 	f := func(ctx context.Context) {
 		time.Sleep(10 * time.Millisecond)
-		count++
+		select {
+		case <-ctx.Done():
+			return
+		default:
+			count++
+		}
 	}
 
 	r := NewRestarter(f)
