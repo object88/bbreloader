@@ -8,7 +8,7 @@ import (
 	"os"
 	"os/exec"
 
-	"github.com/object88/bbreloader/sync"
+	"github.com/object88/sync"
 )
 
 var tempDir string
