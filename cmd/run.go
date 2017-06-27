@@ -2,6 +2,9 @@ package cmd
 
 import (
 	"fmt"
+	"log"
+	"os"
+	"os/signal"
 
 	"github.com/object88/bbreloader/config"
 	"github.com/object88/bbreloader/watch"
@@ -22,6 +25,34 @@ var runCmd = &cobra.Command{
 			return
 		}
 
-		watch.Run(configs)
+		sigchan := make(chan os.Signal, 1)
+		signal.Notify(sigchan, os.Interrupt)
+
+		for _, project := range *configs {
+			// Do initial build and start the run.
+			p := project
+
+			// Initialize the build directory
+			p.Build.InitializeBuildDirectory()
+
+			p.Build.Run(p)
+			p.Start()
+
+			// Watch the files for changes
+			err := watch.Watch(p, func(collectedEvents *config.CollectedEvents) {
+				p.Build.Run(p)
+			})
+			if err != nil {
+				log.Printf("Failed to start watch; %s\n", err.Error())
+			}
+		}
+
+		// Wait for a signal to end the app.
+		<-sigchan
+
+		for _, project := range *configs {
+			// Clean up the build temp directory
+			project.Build.DestroyBuildDirectory()
+		}
 	},
 }

@@ -11,44 +11,44 @@ import (
 	"github.com/object88/sync"
 )
 
-var tempDir string
-var tempFileIndex int
+// Build contains a series of individual steps necessary to build a project
+type Build struct {
+	Args          *Args
+	PreBuild      []*Step
+	PostBuild     []*Step
+	tempDir       string
+	tempFileIndex int
+	restarter     *sync.Restarter
+}
 
 // InitializeBuildDirectory will get a temp directory for all the
 // build operations.
-func InitializeBuildDirectory() error {
-	var err error
-	tempDir, err = ioutil.TempDir("", "")
+func (b *Build) InitializeBuildDirectory() error {
+	tempDir, err := ioutil.TempDir("", "")
 	if nil != err {
 		return err
 	}
+
+	b.tempDir = tempDir
 
 	fmt.Printf("Will use build dir '%s'\n", tempDir)
 	return nil
 }
 
 // DestroyBuildDirectory removes the temp directory.
-func DestroyBuildDirectory() {
-	os.Remove(tempDir)
-}
-
-// Build contains a series of individual steps necessary to build a project
-type Build struct {
-	Args      *Args
-	PreBuild  []*Step
-	PostBuild []*Step
-	restarter *sync.Restarter
+func (b *Build) DestroyBuildDirectory() {
+	os.Remove(b.tempDir)
 }
 
 func parseBuildConfig(project *ProjectMapstructure, build *BuildMapstructure) *Build {
 	r := sync.NewRestarter()
 	if build == nil {
-		return &Build{&Args{}, []*Step{}, []*Step{}, r}
+		return &Build{&Args{}, []*Step{}, []*Step{}, "", 0, r}
 	}
 	args := parseArgs(build.Args)
 	pre := makeSteps(project, build.PreBuildSteps)
 	post := makeSteps(project, build.PostBuildSteps)
-	return &Build{args, pre, post, r}
+	return &Build{args, pre, post, "", 0, r}
 }
 
 func makeSteps(project *ProjectMapstructure, steps *[]StepMapstructure) []*Step {
@@ -75,8 +75,8 @@ func (b *Build) Run(p *Project) (int, error) {
 }
 
 func (b *Build) work(ctx context.Context, p *Project) error {
-	tempFileName := fmt.Sprintf("%s/%d.tmp", tempDir, tempFileIndex)
-	tempFileIndex++
+	tempFileName := fmt.Sprintf("%s/%d.tmp", b.tempDir, b.tempFileIndex)
+	b.tempFileIndex++
 
 	// Run pre-build steps
 	runSteps(ctx, p, &b.PreBuild)
