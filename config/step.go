@@ -13,17 +13,19 @@ type Step struct {
 	Args    *[]string `json:"args"`
 }
 
-func runSteps(ctx context.Context, project *Project, steps *[]*Step) {
+func runSteps(ctx context.Context, project *Project, steps *[]*Step) error {
 	for i, step := range *steps {
 		select {
 		case <-ctx.Done():
-			return
+			return context.Canceled
 		default:
 			log.Printf("Step #%d...", i)
 			step.Run(ctx, project)
 			log.Printf("Finished step.\n")
 		}
 	}
+
+	return nil
 }
 
 func stepConfigToStep(project *ProjectMapstructure, sc *StepMapstructure) *Step {

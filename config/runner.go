@@ -9,6 +9,7 @@ import (
 const defaultRestartGlob = ""
 const defaultRebuildGlob = "*.go"
 
+// Runner represents a runnable process
 type Runner struct {
 	Args     *Args
 	Retain   bool

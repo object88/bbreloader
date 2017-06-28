@@ -66,12 +66,12 @@ func makeSteps(project *ProjectMapstructure, steps *[]StepMapstructure) []*Step 
 }
 
 // Run executes the step with an interruptable context
-func (b *Builder) Run(p *Project) (int, error) {
+func (b *Builder) Run(p *Project) error {
 	b.restarter.Invoke(func(ctx context.Context) {
 		b.work(ctx, p)
 	})
 
-	return 0, nil
+	return nil
 }
 
 func (b *Builder) work(ctx context.Context, p *Project) error {
@@ -79,12 +79,15 @@ func (b *Builder) work(ctx context.Context, p *Project) error {
 	b.tempFileIndex++
 
 	// Run pre-build steps
-	runSteps(ctx, p, &b.PreBuild)
+	preStepErr := runSteps(ctx, p, &b.PreBuild)
+	if preStepErr != nil {
+		return preStepErr
+	}
 
 	// Spawn the go build command
 	select {
 	case <-ctx.Done():
-		return nil
+		return context.Canceled
 	default:
 		completeArgs := b.Args.prependArgs("build", "-o", tempFileName)
 		cmd := exec.CommandContext(ctx, "go", *completeArgs...)
@@ -102,7 +105,7 @@ func (b *Builder) work(ctx context.Context, p *Project) error {
 	// Stop any previously running instance
 	select {
 	case <-ctx.Done():
-		return nil
+		return context.Canceled
 	default:
 		p.Runner.Stop()
 	}
@@ -111,7 +114,7 @@ func (b *Builder) work(ctx context.Context, p *Project) error {
 		// Move the built file.
 		select {
 		case <-ctx.Done():
-			return nil
+			return context.Canceled
 		default:
 			// WARNING; there are some issues with this strategy:
 			// https://stackoverflow.com/questions/30385225/in-go-is-there-an-os-independent-way-to-atomically-overwrite-a-file
@@ -127,9 +130,12 @@ func (b *Builder) work(ctx context.Context, p *Project) error {
 	// Run post-build steps
 	select {
 	case <-ctx.Done():
-		return nil
+		return context.Canceled
 	default:
-		runSteps(ctx, p, &b.PostBuild)
+		postStepErr := runSteps(ctx, p, &b.PostBuild)
+		if postStepErr != nil {
+			return postStepErr
+		}
 	}
 
 	return nil
