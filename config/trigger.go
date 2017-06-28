@@ -4,16 +4,17 @@ import "github.com/object88/bbreloader/glob"
 
 // Trigger is a glob of files to watch and an action to take when the change
 type Trigger struct {
-	Action          string
 	CollectedEvents *CollectedEvents
 	Matcher         *glob.Matcher
 }
 
-func parseTriggerConfig(trigger *TriggerMapstructure) *Trigger {
-	action := trigger.Action
+func parseGlob(path string) *Trigger {
+	if path == "" {
+		return nil
+	}
 	ce := newCollectedEvents()
-	m := glob.PreprocessGlobSpec(trigger.Glob)
-	return &Trigger{action, ce, m}
+	m := glob.PreprocessGlobSpec(path)
+	return &Trigger{ce, m}
 }
 
 // ResetTrigger returns all the events associated with this trigger and starts

@@ -2,23 +2,9 @@
   "projects": [{
     "root": ".",
     "target": "./bin/bbreloader",
-    "build": {
-      "steps": [{
-        "type": "stop"
-      }, {
-        "type": "build"
-      }, {
-        "type": "custom",
-        "command": "chmod",
-        "args": ["744", "./bin/bbreloader"]
-      }]
-    },
-    "triggers": [{
-      "action": "build",
-      "glob": "**/*.go, !**/*_test.go"
-    }, {
-      "action": "restart",
-      "glob": "*.json"
-    }]
+    "run": {
+      "retain": true,
+      "rebuild-trigger-glob": "**/*.go, !**/*_test.go"
+    }
   }]
 }
