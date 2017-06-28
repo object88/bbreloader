@@ -42,6 +42,7 @@ var runCmd = &cobra.Command{
 			if p.Runner.Rebuild != nil {
 				rebuildErr := watch.Watch(p, p.Runner.Rebuild, func(collectedEvents *config.CollectedEvents) {
 					p.Builder.Run(p)
+					p.Runner.Start(p)
 				})
 				if rebuildErr != nil {
 					log.Printf("Failed to start 'rebuild' watch; %s\n", rebuildErr.Error())
