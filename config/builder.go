@@ -11,8 +11,8 @@ import (
 	"github.com/object88/sync"
 )
 
-// Build contains a series of individual steps necessary to build a project
-type Build struct {
+// Builder contains a series of individual steps necessary to build a project
+type Builder struct {
 	Args          *Args
 	PreBuild      []*Step
 	PostBuild     []*Step
@@ -23,7 +23,7 @@ type Build struct {
 
 // InitializeBuildDirectory will get a temp directory for all the
 // build operations.
-func (b *Build) InitializeBuildDirectory() error {
+func (b *Builder) InitializeBuildDirectory() error {
 	tempDir, err := ioutil.TempDir("", "")
 	if nil != err {
 		return err
@@ -36,19 +36,19 @@ func (b *Build) InitializeBuildDirectory() error {
 }
 
 // DestroyBuildDirectory removes the temp directory.
-func (b *Build) DestroyBuildDirectory() {
+func (b *Builder) DestroyBuildDirectory() {
 	os.Remove(b.tempDir)
 }
 
-func parseBuildConfig(project *ProjectMapstructure, build *BuildMapstructure) *Build {
+func parseBuildConfig(project *ProjectMapstructure, build *BuildMapstructure) *Builder {
 	r := sync.NewRestarter()
 	if build == nil {
-		return &Build{&Args{}, []*Step{}, []*Step{}, "", 0, r}
+		return &Builder{&Args{}, []*Step{}, []*Step{}, "", 0, r}
 	}
 	args := parseArgs(build.Args)
 	pre := makeSteps(project, build.PreBuildSteps)
 	post := makeSteps(project, build.PostBuildSteps)
-	return &Build{args, pre, post, "", 0, r}
+	return &Builder{args, pre, post, "", 0, r}
 }
 
 func makeSteps(project *ProjectMapstructure, steps *[]StepMapstructure) []*Step {
@@ -66,7 +66,7 @@ func makeSteps(project *ProjectMapstructure, steps *[]StepMapstructure) []*Step 
 }
 
 // Run executes the step with an interruptable context
-func (b *Build) Run(p *Project) (int, error) {
+func (b *Builder) Run(p *Project) (int, error) {
 	b.restarter.Invoke(func(ctx context.Context) {
 		b.work(ctx, p)
 	})
@@ -74,7 +74,7 @@ func (b *Build) Run(p *Project) (int, error) {
 	return 0, nil
 }
 
-func (b *Build) work(ctx context.Context, p *Project) error {
+func (b *Builder) work(ctx context.Context, p *Project) error {
 	tempFileName := fmt.Sprintf("%s/%d.tmp", b.tempDir, b.tempFileIndex)
 	b.tempFileIndex++
 
@@ -104,7 +104,7 @@ func (b *Build) work(ctx context.Context, p *Project) error {
 	case <-ctx.Done():
 		return nil
 	default:
-		p.Run.Stop()
+		p.Runner.Stop()
 	}
 
 	if p.Target != nil {

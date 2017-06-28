@@ -21,7 +21,7 @@ func Watch(p *config.Project, trigger *config.Trigger, callback func(events *con
 		return err
 	}
 
-	go watch(p, p.Run.Rebuild, notifyChan, callback)
+	go watch(p, trigger, notifyChan, callback)
 
 	return nil
 }

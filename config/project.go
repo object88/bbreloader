@@ -10,12 +10,12 @@ import (
 
 // Project describes the build and run actions to take for a single project
 type Project struct {
-	Root   string
-	Watch  string
-	Target *string
-	Build  *Build
+	Root    string
+	Watch   string
+	Target  *string
+	Builder *Builder
 	// Test *Test
-	Run *Run
+	Runner *Runner
 }
 
 // SetupProjects reads the configuration and transforms it into living objects
@@ -52,13 +52,13 @@ func parseProject(project *ProjectMapstructure) *Project {
 
 	build := parseBuildConfig(project, project.Build)
 
-	run := parseRun(project, project.Run)
+	runner := parseRun(project, project.Run)
 
 	return &Project{
-		Root:   root,
-		Watch:  watch,
-		Target: project.Target,
-		Build:  build,
-		Run:    run,
+		Root:    root,
+		Watch:   watch,
+		Target:  project.Target,
+		Builder: build,
+		Runner:  runner,
 	}
 }

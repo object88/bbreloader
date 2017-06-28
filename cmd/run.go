@@ -33,22 +33,22 @@ var runCmd = &cobra.Command{
 			p := project
 
 			// Initialize the build directory
-			p.Build.InitializeBuildDirectory()
+			p.Builder.InitializeBuildDirectory()
 
-			p.Build.Run(p)
-			p.Run.Start(p)
+			p.Builder.Run(p)
+			p.Runner.Start(p)
 
 			// Watch the files for changes
-			rebuildErr := watch.Watch(p, p.Run.Rebuild, func(collectedEvents *config.CollectedEvents) {
-				p.Build.Run(p)
+			rebuildErr := watch.Watch(p, p.Runner.Rebuild, func(collectedEvents *config.CollectedEvents) {
+				p.Builder.Run(p)
 			})
 			if rebuildErr != nil {
 				log.Printf("Failed to start 'rebuild' watch; %s\n", rebuildErr.Error())
 			}
 
-			restartErr := watch.Watch(p, p.Run.Restart, func(collectedEvents *config.CollectedEvents) {
-				p.Run.Stop()
-				p.Run.Start(p)
+			restartErr := watch.Watch(p, p.Runner.Restart, func(collectedEvents *config.CollectedEvents) {
+				p.Runner.Stop()
+				p.Runner.Start(p)
 			})
 			if restartErr != nil {
 				log.Printf("Failed to start 'restart' watch; %s\n", restartErr.Error())
@@ -60,7 +60,7 @@ var runCmd = &cobra.Command{
 
 		for _, project := range *projects {
 			// Clean up the build temp directory
-			project.Build.DestroyBuildDirectory()
+			project.Builder.DestroyBuildDirectory()
 		}
 	},
 }

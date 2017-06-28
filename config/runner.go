@@ -9,7 +9,7 @@ import (
 const defaultRestartGlob = ""
 const defaultRebuildGlob = "*.go"
 
-type Run struct {
+type Runner struct {
 	Args     *Args
 	Retain   bool
 	Rebuild  *Trigger
@@ -18,7 +18,7 @@ type Run struct {
 	cancelFn *context.CancelFunc
 }
 
-func parseRun(project *ProjectMapstructure, r *RunMapstructure) *Run {
+func parseRun(project *ProjectMapstructure, r *RunMapstructure) *Runner {
 	args := parseArgs(r.Args)
 
 	retain := false
@@ -38,11 +38,11 @@ func parseRun(project *ProjectMapstructure, r *RunMapstructure) *Run {
 	}
 	restart := parseGlob(restartGlob)
 
-	return &Run{args, retain, rebuild, restart, nil, nil}
+	return &Runner{args, retain, rebuild, restart, nil, nil}
 }
 
 // Start spins up the process
-func (r *Run) Start(p *Project) {
+func (r *Runner) Start(p *Project) {
 	if r.Retain {
 		ctx, cancelFn := context.WithCancel(context.Background())
 		log.Printf("Starting process...")
@@ -65,7 +65,7 @@ func (r *Run) Start(p *Project) {
 }
 
 // Stop shuts down the process
-func (r *Run) Stop() {
+func (r *Runner) Stop() {
 	if r.ctx != nil {
 		log.Printf("Stopping process...")
 		(*r.cancelFn)()
