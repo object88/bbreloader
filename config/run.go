@@ -3,7 +3,6 @@ package config
 import (
 	"context"
 	"log"
-	"os"
 	"os/exec"
 )
 
@@ -11,10 +10,12 @@ const defaultRestartGlob = ""
 const defaultRebuildGlob = "*.go"
 
 type Run struct {
-	Args    *Args
-	Retain  bool
-	Rebuild *Trigger
-	Restart *Trigger
+	Args     *Args
+	Retain   bool
+	Rebuild  *Trigger
+	Restart  *Trigger
+	ctx      *context.Context
+	cancelFn *context.CancelFunc
 }
 
 func parseRun(project *ProjectMapstructure, r *RunMapstructure) *Run {
@@ -37,22 +38,39 @@ func parseRun(project *ProjectMapstructure, r *RunMapstructure) *Run {
 	}
 	restart := parseGlob(restartGlob)
 
-	return &Run{args, retain, rebuild, restart}
+	return &Run{args, retain, rebuild, restart, nil, nil}
 }
 
-// Run executes the step with an interruptable context
-func (r *Run) Run(ctx context.Context, p *Project) (int, error) {
-	// For now, just route output to stdout.
-	cmd := exec.CommandContext(ctx, *p.Target, *r.Args...)
-	cmd.Dir = p.Root
-	cmd.Stdout = os.Stdout
-	cmd.Stderr = os.Stdout
-
-	err := cmd.Run()
-	if err != nil {
-		log.Fatalf("Run command failed: %s\n", err.Error())
-		return 0, err
+// Start spins up the process
+func (r *Run) Start(p *Project) {
+	if r.Retain {
+		ctx, cancelFn := context.WithCancel(context.Background())
+		log.Printf("Starting process...")
+		startErr := exec.CommandContext(ctx, *p.Target).Start()
+		if startErr != nil {
+			log.Printf("Failed to start retained process.")
+			cancelFn()
+			return
+		}
+		r.ctx = &ctx
+		r.cancelFn = &cancelFn
+	} else {
+		startErr := exec.Command(*p.Target).Start()
+		if startErr != nil {
+			log.Printf("Failed to start process.")
+			return
+		}
 	}
+	log.Printf("Started.")
+}
 
-	return 0, nil
+// Stop shuts down the process
+func (r *Run) Stop() {
+	if r.ctx != nil {
+		log.Printf("Stopping process...")
+		(*r.cancelFn)()
+		r.ctx = nil
+		r.cancelFn = nil
+		log.Printf("Stopped.")
+	}
 }

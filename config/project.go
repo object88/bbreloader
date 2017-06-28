@@ -1,9 +1,7 @@
 package config
 
 import (
-	"context"
 	"log"
-	"os/exec"
 	"path/filepath"
 	"strings"
 
@@ -17,9 +15,7 @@ type Project struct {
 	Target *string
 	Build  *Build
 	// Test *Test
-	Run      *Run
-	Context  context.Context
-	CancelFn *context.CancelFunc
+	Run *Run
 }
 
 // SetupProjects reads the configuration and transforms it into living objects
@@ -35,40 +31,6 @@ func SetupProjects() (*[]*Project, bool) {
 	}
 
 	return &c, true
-}
-
-// Start spins up the process
-func (c *Project) Start() {
-	// if c.Retain {
-	ctx, cancelFn := context.WithCancel(context.Background())
-	log.Printf("Starting process...")
-	startErr := exec.CommandContext(ctx, *c.Target).Start()
-	if startErr != nil {
-		log.Printf("Failed to start retained process.")
-		cancelFn()
-		return
-	}
-	c.Context = ctx
-	c.CancelFn = &cancelFn
-	// } else {
-	// 	startErr := exec.Command(*c.Target).Start()
-	// 	if startErr != nil {
-	// 		log.Printf("Failed to start process.")
-	// 		return
-	// 	}
-	// }
-	log.Printf("Started.")
-}
-
-// Stop shuts down the process
-func (c *Project) Stop() {
-	if c.Context != nil {
-		log.Printf("Stopping process...")
-		(*c.CancelFn)()
-		c.Context = nil
-		c.CancelFn = nil
-		log.Printf("Stopped.")
-	}
 }
 
 func parseProject(project *ProjectMapstructure) *Project {

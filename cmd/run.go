@@ -36,7 +36,7 @@ var runCmd = &cobra.Command{
 			p.Build.InitializeBuildDirectory()
 
 			p.Build.Run(p)
-			p.Start()
+			p.Run.Start(p)
 
 			// Watch the files for changes
 			rebuildErr := watch.Watch(p, p.Run.Rebuild, func(collectedEvents *config.CollectedEvents) {
@@ -47,8 +47,8 @@ var runCmd = &cobra.Command{
 			}
 
 			restartErr := watch.Watch(p, p.Run.Restart, func(collectedEvents *config.CollectedEvents) {
-				p.Stop()
-				p.Start()
+				p.Run.Stop()
+				p.Run.Start(p)
 			})
 			if restartErr != nil {
 				log.Printf("Failed to start 'restart' watch; %s\n", restartErr.Error())

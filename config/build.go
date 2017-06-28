@@ -104,7 +104,7 @@ func (b *Build) work(ctx context.Context, p *Project) error {
 	case <-ctx.Done():
 		return nil
 	default:
-		p.Stop()
+		p.Run.Stop()
 	}
 
 	if p.Target != nil {
