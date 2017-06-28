@@ -10,7 +10,7 @@ import (
 
 // Watch builds and starts the process, then watches the file system for
 // changes to trigger another build or restart
-func Watch(p *config.Project, callback func(events *config.CollectedEvents)) error {
+func Watch(p *config.Project, trigger *config.Trigger, callback func(events *config.CollectedEvents)) error {
 	notifyChan := make(chan notify.EventInfo, 4096)
 
 	// Start watch at root filesystem level
@@ -46,9 +46,4 @@ func watch(project *config.Project, trigger *config.Trigger, notifyChan chan not
 			}
 		}
 	}
-}
-
-func restart(project *config.Project) {
-	project.Stop()
-	project.Start()
 }

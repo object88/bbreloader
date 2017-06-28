@@ -22,8 +22,8 @@ type Project struct {
 	CancelFn *context.CancelFunc
 }
 
-// SetupConfig reads the configuration and transforms it into living objects
-func SetupConfig() (*[]*Project, bool) {
+// SetupProjects reads the configuration and transforms it into living objects
+func SetupProjects() (*[]*Project, bool) {
 	config := ReloaderMapstructure{}
 	viper.Unmarshal(&config)
 
@@ -31,7 +31,7 @@ func SetupConfig() (*[]*Project, bool) {
 
 	c := make([]*Project, len(config.Projects))
 	for k, v := range config.Projects {
-		c[k] = parseConfig(v)
+		c[k] = parseProject(v)
 	}
 
 	return &c, true
@@ -71,7 +71,7 @@ func (c *Project) Stop() {
 	}
 }
 
-func parseConfig(project *ProjectMapstructure) *Project {
+func parseProject(project *ProjectMapstructure) *Project {
 	root := "."
 	if project.Root != nil {
 		root = *project.Root

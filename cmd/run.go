@@ -19,7 +19,7 @@ var runCmd = &cobra.Command{
 	Run: func(cmd *cobra.Command, args []string) {
 		readConfig()
 
-		configs, ok := config.SetupConfig()
+		projects, ok := config.SetupProjects()
 		if !ok {
 			fmt.Printf("NOPE.")
 			return
@@ -28,7 +28,7 @@ var runCmd = &cobra.Command{
 		sigchan := make(chan os.Signal, 1)
 		signal.Notify(sigchan, os.Interrupt)
 
-		for _, project := range *configs {
+		for _, project := range *projects {
 			// Do initial build and start the run.
 			p := project
 
@@ -39,18 +39,26 @@ var runCmd = &cobra.Command{
 			p.Start()
 
 			// Watch the files for changes
-			err := watch.Watch(p, func(collectedEvents *config.CollectedEvents) {
+			rebuildErr := watch.Watch(p, p.Run.Rebuild, func(collectedEvents *config.CollectedEvents) {
 				p.Build.Run(p)
 			})
-			if err != nil {
-				log.Printf("Failed to start watch; %s\n", err.Error())
+			if rebuildErr != nil {
+				log.Printf("Failed to start 'rebuild' watch; %s\n", rebuildErr.Error())
+			}
+
+			restartErr := watch.Watch(p, p.Run.Restart, func(collectedEvents *config.CollectedEvents) {
+				p.Stop()
+				p.Start()
+			})
+			if restartErr != nil {
+				log.Printf("Failed to start 'restart' watch; %s\n", restartErr.Error())
 			}
 		}
 
 		// Wait for a signal to end the app.
 		<-sigchan
 
-		for _, project := range *configs {
+		for _, project := range *projects {
 			// Clean up the build temp directory
 			project.Build.DestroyBuildDirectory()
 		}
