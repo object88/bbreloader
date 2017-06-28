@@ -39,19 +39,23 @@ var runCmd = &cobra.Command{
 			p.Runner.Start(p)
 
 			// Watch the files for changes
-			rebuildErr := watch.Watch(p, p.Runner.Rebuild, func(collectedEvents *config.CollectedEvents) {
-				p.Builder.Run(p)
-			})
-			if rebuildErr != nil {
-				log.Printf("Failed to start 'rebuild' watch; %s\n", rebuildErr.Error())
+			if p.Runner.Rebuild != nil {
+				rebuildErr := watch.Watch(p, p.Runner.Rebuild, func(collectedEvents *config.CollectedEvents) {
+					p.Builder.Run(p)
+				})
+				if rebuildErr != nil {
+					log.Printf("Failed to start 'rebuild' watch; %s\n", rebuildErr.Error())
+				}
 			}
 
-			restartErr := watch.Watch(p, p.Runner.Restart, func(collectedEvents *config.CollectedEvents) {
-				p.Runner.Stop()
-				p.Runner.Start(p)
-			})
-			if restartErr != nil {
-				log.Printf("Failed to start 'restart' watch; %s\n", restartErr.Error())
+			if p.Runner.Restart != nil {
+				restartErr := watch.Watch(p, p.Runner.Restart, func(collectedEvents *config.CollectedEvents) {
+					p.Runner.Stop()
+					p.Runner.Start(p)
+				})
+				if restartErr != nil {
+					log.Printf("Failed to start 'restart' watch; %s\n", restartErr.Error())
+				}
 			}
 		}
 
