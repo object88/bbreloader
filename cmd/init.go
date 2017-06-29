@@ -16,7 +16,7 @@ var initCmd = &cobra.Command{
 	Long:    "Creates an empty '.reloader.json' file.",
 	Run: func(cmd *cobra.Command, args []string) {
 		// Attempt to open the file for writing.  We are specifying that the
-		// file not be created and must not already exist.
+		// file must be created and must not already exist.
 		f, createErr := os.OpenFile(cfgFile, os.O_CREATE|os.O_EXCL|os.O_WRONLY, 0644)
 		if os.IsExist(createErr) {
 			fmt.Printf("Configuration file '%s' already exists; will not overwrite.\n", cfgFile)
