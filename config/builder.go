@@ -67,11 +67,12 @@ func makeSteps(project *ProjectMapstructure, steps *[]StepMapstructure) []*Step 
 
 // Run executes the step with an interruptable context
 func (b *Builder) Run(p *Project) error {
+	var err error
 	b.restarter.Invoke(func(ctx context.Context) {
-		b.work(ctx, p)
+		err = b.work(ctx, p)
 	})
 
-	return nil
+	return err
 }
 
 func (b *Builder) work(ctx context.Context, p *Project) error {

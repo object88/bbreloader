@@ -42,7 +42,6 @@ var runCmd = &cobra.Command{
 			if p.Runner.Rebuild != nil {
 				rebuildErr := watch.Watch(p, p.Runner.Rebuild, func(collectedEvents *config.CollectedEvents) {
 					buildErr := p.Builder.Run(p)
-					// Should get confirmation that the build worked.
 					if buildErr != nil {
 						log.Printf("Build failed; waiting for next code change: %s\n", buildErr)
 					} else {
