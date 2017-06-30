@@ -1,0 +1,22 @@
+{
+  "configs": [{
+    "root": "../bb",
+    "target": "./bin/bb",
+    "patterns": [{
+      "glob": "**/*.go, !**/*_test.go",
+      "steps": [{
+        "command": "go",
+        "args": ["build", "-o", "./bin/bb"]
+      }, {
+        "command": "chmod",
+        "args": ["744", "./bin/bb"]
+      }]
+    }, {
+      "glob": "bin/bb",
+      "steps": [{
+        "command": "bin/bb",
+        "retain": true
+      }]
+    }]
+  }]
+}

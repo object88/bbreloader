@@ -3,4 +3,4 @@ bbreloader
 
 .vscode
 bin
-examples
+node_modules

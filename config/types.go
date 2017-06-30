@@ -46,6 +46,7 @@ func (p *ProjectMapstructure) String() string {
 // BuildMapstructure is for internal use only
 type BuildMapstructure struct {
 	Args           *[]string           `mapstructure:"args"`
+	Command        *string             `mapstructure:"command"`
 	PreBuildSteps  *[]StepMapstructure `mapstructure:"pre-build-steps"`
 	PostBuildSteps *[]StepMapstructure `mapstructure:"post-build-steps"`
 }
@@ -53,6 +54,7 @@ type BuildMapstructure struct {
 // RunMapstructure is for internal use only
 type RunMapstructure struct {
 	Args        *[]string `mapstructure:"args"`
+	Command     *string   `mapstructure:"command"`
 	Retain      *bool     `mapstructure:"retain"`
 	RebuildGlob *string   `mapstructure:"rebuild-trigger-glob"`
 	RestartGlob *string   `mapstructure:"restart-trigger-glob"`

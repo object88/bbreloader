@@ -1,0 +1,25 @@
+{
+  "projects": [{
+    "root": "server",
+    "target": "./bin/server",
+    "run": {
+      "retain": true,
+      "rebuild-trigger-glob": "**/*.go, !**/*_test.go"
+    }
+  }, {
+    "root": "proxy",
+    "run": {
+      "command": "yarn",
+      "args": ["run", "start"],
+      "retain": true,
+      "restart-trigger-glob": "**/*.js"
+    }
+  }, {
+    "root": "client",
+    "target": "./bin/client",
+    "run":{
+      "retain": true,
+      "rebuild-trigger-glob": "**/*.go, !**/*_test.go"
+    }
+  }]
+}

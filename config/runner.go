@@ -12,6 +12,7 @@ const defaultRebuildGlob = "*.go"
 // Runner represents a runnable process
 type Runner struct {
 	Args     *Args
+	Command  *string
 	Retain   bool
 	Rebuild  *Trigger
 	Restart  *Trigger
@@ -39,15 +40,24 @@ func parseRun(project *ProjectMapstructure, r *RunMapstructure) *Runner {
 	}
 	restart := parseGlob(restartGlob)
 
-	return &Runner{args, retain, rebuild, restart, nil, nil}
+	return &Runner{args, r.Command, retain, rebuild, restart, nil, nil}
 }
 
 // Start spins up the process
 func (r *Runner) Start(p *Project) {
+	command := r.Command
+	if command == nil {
+		command = p.Target
+	}
+	if command == nil {
+		// Nothing to run?
+		return
+	}
+
 	if r.Retain {
 		ctx, cancelFn := context.WithCancel(context.Background())
 		log.Printf("Starting process...")
-		startErr := exec.CommandContext(ctx, *p.Target).Start()
+		startErr := exec.CommandContext(ctx, *command).Start()
 		if startErr != nil {
 			log.Printf("Failed to start retained process.")
 			cancelFn()
@@ -56,7 +66,7 @@ func (r *Runner) Start(p *Project) {
 		r.ctx = &ctx
 		r.cancelFn = &cancelFn
 	} else {
-		startErr := exec.Command(*p.Target).Start()
+		startErr := exec.Command(*command).Start()
 		if startErr != nil {
 			log.Printf("Failed to start process.")
 			return
