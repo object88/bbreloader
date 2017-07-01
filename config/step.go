@@ -20,7 +20,10 @@ func runSteps(ctx context.Context, project *Project, steps *[]*Step) error {
 			return context.Canceled
 		default:
 			log.Printf("Step #%d...", i)
-			step.Run(ctx, project)
+			_, err := step.Run(ctx, project)
+			if err != nil {
+				return err
+			}
 			log.Printf("Finished step.\n")
 		}
 	}

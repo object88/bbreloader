@@ -38,17 +38,23 @@ Alternately, you can specify a different file to create with the `--config` flag
 
 Once your configuration file is created, you may customize it with your favorite JSON editor.  The JSON structure is defined in [Configuration file structure](docs/configuration.md).
 
-### Running and testing
-
-Reloader has to main modes of operation: running and testing.  Each has thier own command.
-
-#### Run
+### Running
 
 The `run` command will start an executable after every successful compilation:
 
 ``` bash
 % reloader run
 ```
+
+The `run` command will use the `.reloader.json` file in the current directory to exersize your code.  Alternately, you may use a different file, with the `--config` flag:
+
+``` bash
+% reloader run --config .reloader.experiment.json
+```
+
+### Testing
+
+The `test` command is coming soon to a theater near you.
 
 ### Version
 
@@ -60,88 +66,13 @@ To get the version of the Reloader binary, use the `version` command:
 
 This command does not require a configuration file.
 
-## Example files
+## Configuration file spec
 
-Configuration file example:
-
-``` JSON
-{
-  "projects": [{
-    "root": ".",
-    "target": "./bin/bbreloader",
-    "build": {
-      "pre-build-steps": [],
-      "command": "",
-      "args": "",
-      "post-build-steps": [{
-        "command": "chmod",
-        "args": ["744", "./bin/bbreloader"]
-      }, {
-        "command": "codesign",
-        "args": "-s $CERT ./bin/bbreloader",
-      }]
-    },
-    "run": {
-      "command": "",
-      "args": "",
-      "retain": true,
-      "rebuild-trigger-glob": "**/*.go, !**/*_test.go",
-      "restart-trigger-glob": "*.json",
-    },
-    "test": {
-      "command": "",
-      "args": "",
-      "restart-trigger-glob": "*_test.go",
-    }
-  }]
-}
-```
-
-## Examples
-
-### Rebuild and run tests
-
-Command:
-`rebuilder test`
-
-``` JSON
-{
-  "projects": [{}]
-}
-```
-
-### Rebuild and restart a server when any `.go` file changes
-
-``` JSON
-{
-  "projects": [{
-    "target": "./bin/myservice",
-    "run": {
-      "retain": true,
-      "rebuild-trigger-glob": "**/*.go",
-    },
-  }]
-}
-```
-
-### Restart a JS web service with Babel
-
-``` JSON
-{
-  "projects": [{
-    "run": {
-      "command": "babel-cli",
-      "args": "./server.js",
-      "retain": true,
-      "restart-trigger-glob": "**/*.js"
-    }
-  }]
-}
-```
+The complete spec for the configuration file [is available](docs/spec.md).
 
 ## Reloader is not
 
-... a substitute for `npm`, `gradle`, `grunt`, `gulp`, or other multi-purpose tools.  Reloader will not install your dependencies, clean up your artifacts, or commit your code to a source code repository.
+... a substitute for `npm`, `gradle`, `grunt`, `gulp`, or other multi-purpose tools.  Reloader is not meant to install your dependencies, package or clean up your artifacts, or commit your code to a source code repository; your project language's native tools are going to be better suited.
 
 ## Alternatives
 
